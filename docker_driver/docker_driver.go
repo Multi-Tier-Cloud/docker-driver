@@ -86,7 +86,7 @@ func DeleteContainer(cont string) {
     }
 }
 
-// deleting container
+// restarting container
 func RestartContainer(cont string) {
     _, err := exec.Command("docker", "restart", cont).Output()
     if err != nil {
