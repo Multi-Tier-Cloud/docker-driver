@@ -21,4 +21,6 @@ func main() {
     driver.StopContainer(container)
     driver.DeleteContainer(container)
     fmt.Println(driver.ListRunningContainers())
+
+    driver.PullImage("hivanco/hello-world-server@sha256:3d4002fcaaa8c2a363c94ebec142447d3b04e0dc3e77954598fe97f285e0c37e")
 }

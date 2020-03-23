@@ -17,10 +17,12 @@ type Docker_config struct {
     Cmd []string
     Memory string       // b k m or g   min is 4M   default is inf
     Cpu string          // between 0.00 to 1.00*cores
+    Network string
+    Env []string
 }
 
 // image should be imagename:version
-// TODO: find out how to grab image by hash
+// hash should be user/image@sha256:digest
 func PullImage(image string) {
     out, err := exec.Command("docker", "pull", image).Output()
     if err != nil {
@@ -117,8 +119,10 @@ func RunContainer(opt Docker_config) string {
         Cmd: opt.Cmd,
         ExposedPorts: nat.PortSet{ nat.Port(opt.Port[0]) : struct{}{} },
         Tty: true,
+        Env: opt.Env,
     },
     &container.HostConfig{
+        NetworkMode: container.NetworkMode(opt.Network),
         PortBindings: nat.PortMap{ nat.Port(opt.Port[0]) :
             []nat.PortBinding{ nat.PortBinding{ HostPort: opt.Port[1] } }, },
     },
