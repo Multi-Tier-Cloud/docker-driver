@@ -23,25 +23,27 @@ type Docker_config struct {
 
 // image should be imagename:version
 // hash should be user/image@sha256:digest
-func PullImage(image string) {
+func PullImage(image string) (string, error) {
     out, err := exec.Command("docker", "pull", image).Output()
     if err != nil {
-        panic(err)
+        return "", err
     }
 
     fmt.Println(string(out[:]))
+
+    return "success", nil
 }
 
-func ListImages() []string {
+func ListImages() ([]string, error) {
     //ctx := context.Background()
     cli, err := client.NewEnvClient()
     if err != nil {
-        panic(err)
+        return nil, err
     }
 
     images, err := cli.ImageList(context.Background(), types.ImageListOptions{})
     if err != nil {
-        panic(err)
+        return nil, err
     }
 
     var ilist []string
@@ -49,19 +51,19 @@ func ListImages() []string {
         ilist = append(ilist, image.ID[7:])     // skips the sha256 tag
     }
 
-    return ilist
+    return ilist, nil
 }
 
-func ListRunningContainers() []string {
+func ListRunningContainers() ([]string, error) {
     //ctx := context.Background()
     cli, err := client.NewEnvClient()
     if err != nil {
-        panic(err)
+        return nil, err
     }
 
     containers, err := cli.ContainerList(context.Background(), types.ContainerListOptions{})
     if err != nil {
-        panic(err)
+        return nil, err
     }
 
     var clist []string
@@ -69,49 +71,57 @@ func ListRunningContainers() []string {
         clist = append(clist, container.ID)
     }
 
-    return clist
+    return clist, nil
 }
 
 // stopping container
-func StopContainer(cont string) {
+func StopContainer(cont string) (string, error) {
     _, err := exec.Command("docker", "stop", cont).Output()
     if err != nil {
-        panic(err)
+        return "", err
     }
+
+    return "success", nil
 }
 
 // deleting container
-func DeleteContainer(cont string) {
+func DeleteContainer(cont string) (string, error) {
     _, err := exec.Command("docker", "rm", cont).Output()
     if err != nil {
-        panic(err)
+        return "", err
     }
+
+    return "success", nil
 }
 
 // restarting container
-func RestartContainer(cont string) {
+func RestartContainer(cont string) (string, error) {
     _, err := exec.Command("docker", "restart", cont).Output()
     if err != nil {
-        panic(err)
+        return "", err
     }
+
+    return "success", nil
 }
 
 // resizing a container instance on the fly
-func ResizeContainer(cont string, size string) {
+func ResizeContainer(cont string, size string) (string, error) {
     _, err := exec.Command("docker", "container", "update", "-m", size, cont).Output()
     if err != nil {
-        panic(err)
+        return "", err
     }
+
+    return "success", nil
 }
 
 // create and run container - interactive and detached set
 // image (already pulled) should be imagename:version
 // default/empty cmd is /bin/bash
-func RunContainer(opt Docker_config) string {
+func RunContainer(opt Docker_config) (string, error) {
     ctx := context.Background()
     cli, err := client.NewEnvClient()
     if err != nil {
-        panic(err)
+        return "", err
     }
 
     resp, err := cli.ContainerCreate(ctx, &container.Config{
@@ -128,7 +138,7 @@ func RunContainer(opt Docker_config) string {
     },
     nil, "")
     if err != nil {
-        panic(err)
+        return "", err
     }
 
     // updating memory and cpu
@@ -139,16 +149,16 @@ func RunContainer(opt Docker_config) string {
     if (opt.Cpu != "") {
         _, err := exec.Command("docker", "container", "update", "--cpus", opt.Cpu, resp.ID).Output()
         if err != nil {
-            panic(err)
+            return "", err
         }
     }
 
     err = cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{})
     if err != nil {
-        panic(err)
+        return "", err
     }
 
     //fmt.Println(resp.ID)
 
-    return resp.ID
+    return resp.ID, nil
 }

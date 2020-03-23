@@ -16,7 +16,7 @@ func main() {
     }
 
     fmt.Println(driver.ListRunningContainers())
-    container := driver.RunContainer(opt)
+    container, _ := driver.RunContainer(opt)
     fmt.Println(driver.ListRunningContainers())
     driver.StopContainer(container)
     driver.DeleteContainer(container)
