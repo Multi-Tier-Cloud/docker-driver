@@ -1,5 +1,7 @@
 package main
 
+// Deprecated in favour of golang's unit test framework
+
 import (
     "fmt"
 
