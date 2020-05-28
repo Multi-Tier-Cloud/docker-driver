@@ -7,7 +7,7 @@ import (
 )
 
 const (
-    testImage = "busybox"
+    testImage = "library/busybox"
 
     failTestImage = "thisImageNameShouldNotExist"
     failContID = "thisIDShouldNotExist"
@@ -37,12 +37,13 @@ func TestListImages(test *testing.T) {
 }
 
 func TestLifecycle(test *testing.T) {
-    opt := driver.Docker_config{
+    opt := driver.DockerConfig{
+        Name: "lifecycle_test",
         Image: "busybox",
         Port: [2]string{"4812", "4821"},
         Cmd: []string{"sleep", "300"},
-        Memory: "10m",
-        Cpu: "0.5",
+        Memory: 10e+6,
+        Cpu: 0.5,
     }
 
     containerID := ""
@@ -63,7 +64,7 @@ func TestLifecycle(test *testing.T) {
     }
 
     test.Run("ResizeContainer", func(test *testing.T) {
-        _, err := driver.ResizeContainer(containerID, "20m")
+        _, err := driver.ResizeContainer(containerID, 20e+6, 0.5)
         if err != nil {
             test.Errorf("ResizeContainer() returned:\n%v", err)
         }
@@ -101,7 +102,7 @@ func TestListRunningContainers(test *testing.T) {
 
 func TestResizeContainer(test *testing.T) {
     // Test failure case (success case covered in lifecycle test)
-    _, err := driver.ResizeContainer(failContID, "10m")
+    _, err := driver.ResizeContainer(failContID, 10e+6, 0.7)
     if err == nil {
         test.Errorf("ResizeContainer() succeeded with container (%s), expected it to fail", failContID)
     }
