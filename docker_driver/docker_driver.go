@@ -32,11 +32,13 @@ func PullImage(image string) (string, error) {
         return "", err
     }
 
-    out, err := cli.ImagePull(ctx, "docker.io/"+image, types.ImagePullOptions{})
+    out, err := cli.ImagePull(ctx, image, types.ImagePullOptions{})
     if err != nil {
         return "", err
     }
+    defer out.Close()
 
+    // Read until EOF sent to ensure proper transfer of image
     _, err = ioutil.ReadAll(out)
     if err != nil {
         return "", err

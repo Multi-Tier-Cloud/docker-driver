@@ -7,7 +7,7 @@ import (
 )
 
 const (
-    testImage = "library/busybox"
+    testImage = "busybox"
 
     failTestImage = "thisImageNameShouldNotExist"
     failContID = "thisIDShouldNotExist"
