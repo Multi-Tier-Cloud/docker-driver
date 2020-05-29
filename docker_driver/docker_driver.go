@@ -27,7 +27,7 @@ type DockerConfig struct {
 // official images should be library/imagename
 func PullImage(image string) (string, error) {
     ctx := context.Background()
-    cli, err := client.NewEnvClient()
+    cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
     if err != nil {
         return "", err
     }
@@ -47,7 +47,7 @@ func PullImage(image string) (string, error) {
 
 func ListImages() ([]string, error) {
     ctx := context.Background()
-    cli, err := client.NewEnvClient()
+    cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
     if err != nil {
         return nil, err
     }
@@ -67,7 +67,7 @@ func ListImages() ([]string, error) {
 
 func ListRunningContainers() ([]string, error) {
     ctx := context.Background()
-    cli, err := client.NewEnvClient()
+    cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
     if err != nil {
         return nil, err
     }
@@ -88,7 +88,7 @@ func ListRunningContainers() ([]string, error) {
 // stopping container
 func StopContainer(cont string) (string, error) {
     ctx := context.Background()
-    cli, err := client.NewEnvClient()
+    cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
     if err != nil {
         return "", err
     }
@@ -103,7 +103,7 @@ func StopContainer(cont string) (string, error) {
 // deleting container
 func DeleteContainer(cont string) (string, error) {
     ctx := context.Background()
-    cli, err := client.NewEnvClient()
+    cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
     if err != nil {
         return "", err
     }
@@ -118,7 +118,7 @@ func DeleteContainer(cont string) (string, error) {
 // restarting container
 func RestartContainer(cont string) (string, error) {
     ctx := context.Background()
-    cli, err := client.NewEnvClient()
+    cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
     if err != nil {
         return "", err
     }
@@ -133,7 +133,7 @@ func RestartContainer(cont string) (string, error) {
 // resizing a container instance on the fly
 func ResizeContainer(cont string, mem int64, cpu float64) (string, error) {
     ctx := context.Background()
-    cli, err := client.NewEnvClient()
+    cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
     if err != nil {
         return "", err
     }
@@ -156,7 +156,7 @@ func ResizeContainer(cont string, mem int64, cpu float64) (string, error) {
 // default/empty cmd is /bin/bash
 func RunContainer(opt DockerConfig) (string, error) {
     ctx := context.Background()
-    cli, err := client.NewEnvClient()
+    cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
     if err != nil {
         return "", err
     }
