@@ -29,8 +29,8 @@ const (
 )
 
 func TestBuildImage(test *testing.T) {
-    buildTestTarball := "build-test/test-image.tar"
-    buildContext, err := os.Open(buildTestTarball)
+    buildTestTarArchive := "build-test/test-image.tar"
+    buildContext, err := os.Open(buildTestTarArchive)
     if err != nil {
         test.Fatalf("Open() failed with error:\n%v", err)
     }
@@ -54,6 +54,22 @@ func TestPullImage(test *testing.T) {
         _, err := driver.PullImage(failTestImage)
         if err == nil {
             test.Errorf("PullImage() succeeded with image (%s), expected it to fail", failTestImage)
+        }
+    })
+}
+
+func TestSaveImage(test *testing.T) {
+    test.Run("SaveImage-success", func(test *testing.T) {
+        _, err := driver.SaveImage(testImage)
+        if err != nil {
+            test.Errorf("SaveImage() returned:\n%v", err)
+        }
+    })
+
+    test.Run("SaveImage-fail", func(test *testing.T) {
+        _, err := driver.SaveImage(failTestImage)
+        if err == nil {
+            test.Errorf("SaveImage() succeeded with image (%s), expected it to fail", failTestImage)
         }
     })
 }

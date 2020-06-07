@@ -44,7 +44,8 @@ type DockerConfig struct {
 // hash should be user/image@sha256:digest
 // official images should be library/imagename
 
-// buildContext is a tarball containing all files needed to build image, including Dockerfile
+// Builds an image given a build context and image name
+// buildContext is a tar archive containing all files needed to build image, including Dockerfile
 func BuildImage(buildContext io.Reader, image string) error {
     ctx := context.Background()
     cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -104,6 +105,29 @@ func PullImage(image string) (string, error) {
     }
 
     return "success", nil
+}
+
+// Save an image into a tar archive format
+// Returns the tar archive in byte slice
+func SaveImage(image string) ([]byte, error) {
+    ctx := context.Background()
+    cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+    if err != nil {
+        return nil, err
+    }
+
+    resp, err := cli.ImageSave(ctx, []string{image})
+    if err != nil {
+        return nil, err
+    }
+    defer resp.Close()
+
+    savedImageTar, err := ioutil.ReadAll(resp)
+    if err != nil {
+        return nil, err
+    }
+
+    return savedImageTar, nil
 }
 
 func ListImages() ([]string, error) {
