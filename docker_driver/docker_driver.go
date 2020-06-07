@@ -15,8 +15,12 @@
 package docker_driver
 
 import (
-    "math"
+    "bufio"
+    "encoding/json"
+    "errors"
+    "io"
     "io/ioutil"
+    "math"
 
     "github.com/docker/docker/api/types"
     "github.com/docker/docker/client"
@@ -39,6 +43,48 @@ type DockerConfig struct {
 // image should be imagename:version
 // hash should be user/image@sha256:digest
 // official images should be library/imagename
+
+// Builds an image given a build context and image name
+// buildContext is a tar archive containing all files needed to build image, including Dockerfile
+func BuildImage(buildContext io.Reader, image string) error {
+    ctx := context.Background()
+    cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+    if err != nil {
+        return err
+    }
+
+    resp, err := cli.ImageBuild(ctx, buildContext, types.ImageBuildOptions{Tags: []string{image}})
+    if err != nil {
+        return err
+    }
+    defer resp.Body.Close()
+
+    // Possible that cli.ImageBuild() does not return an error,
+    // but instead we see an error from the response body
+    scanner := bufio.NewScanner(resp.Body)
+    for scanner.Scan() {
+        line := scanner.Text()
+        // fmt.Println(line)
+
+        var respBodyObject struct {
+            // Most response lines have "stream" field instead of "error"
+            // But we only care about "error" field
+            Error string
+        }
+
+        err = json.Unmarshal([]byte(line), &respBodyObject)
+        if err != nil {
+            return err
+        }
+
+        if respBodyObject.Error != "" {
+            return errors.New(respBodyObject.Error)
+        }
+    }
+
+    return nil
+}
+
 func PullImage(image string) (string, error) {
     ctx := context.Background()
     cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -59,6 +105,74 @@ func PullImage(image string) (string, error) {
     }
 
     return "success", nil
+}
+
+// Push an image
+// Returns its calculated digest (SHA256 hash of the image)
+func PushImage(encodedAuth, image string) (string, error) {
+    ctx := context.Background()
+    cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+    if err != nil {
+        return "", err
+    }
+
+    resp, err := cli.ImagePush(ctx, image, types.ImagePushOptions{RegistryAuth:encodedAuth})
+    if err != nil {
+        return "", err
+    }
+    defer resp.Close()
+
+    // Possible that cli.ImagePush() does not return an error,
+    // but instead we see an error from the response body
+    scanner := bufio.NewScanner(resp)
+    for scanner.Scan() {
+        line := scanner.Text()
+        // fmt.Println(line)
+
+        var respObject struct {
+            // Only fields we care about are "error" or "digest"
+            Aux struct {
+                Digest string
+            }
+            Error string
+        }
+
+        err = json.Unmarshal([]byte(line), &respObject)
+        if err != nil {
+            return "", err
+        }
+
+        if respObject.Aux.Digest != "" {
+            return respObject.Aux.Digest, nil
+        } else if respObject.Error != "" {
+            return "", errors.New(respObject.Error)
+        }
+    }
+
+    return "", errors.New("docker_driver: Error did not receive digest")
+}
+
+// Save an image into a tar archive format
+// Returns the tar archive in byte slice
+func SaveImage(image string) ([]byte, error) {
+    ctx := context.Background()
+    cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+    if err != nil {
+        return nil, err
+    }
+
+    resp, err := cli.ImageSave(ctx, []string{image})
+    if err != nil {
+        return nil, err
+    }
+    defer resp.Close()
+
+    savedImageTar, err := ioutil.ReadAll(resp)
+    if err != nil {
+        return nil, err
+    }
+
+    return savedImageTar, nil
 }
 
 func ListImages() ([]string, error) {
