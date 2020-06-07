@@ -15,8 +15,12 @@
 package docker_driver
 
 import (
-    "math"
+    "bufio"
+    "encoding/json"
+    "errors"
+    "io"
     "io/ioutil"
+    "math"
 
     "github.com/docker/docker/api/types"
     "github.com/docker/docker/client"
@@ -39,6 +43,47 @@ type DockerConfig struct {
 // image should be imagename:version
 // hash should be user/image@sha256:digest
 // official images should be library/imagename
+
+// buildContext is a tarball containing all files needed to build image, including Dockerfile
+func BuildImage(buildContext io.Reader, image string) error {
+    ctx := context.Background()
+    cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+    if err != nil {
+        return err
+    }
+
+    resp, err := cli.ImageBuild(ctx, buildContext, types.ImageBuildOptions{Tags: []string{image}})
+    if err != nil {
+        return err
+    }
+    defer resp.Body.Close()
+
+    // Possible that cli.ImageBuild() does not return an error,
+    // but instead we see an error from the response body
+    scanner := bufio.NewScanner(resp.Body)
+    for scanner.Scan() {
+        line := scanner.Text()
+        // fmt.Println(line)
+
+        var respBodyObject struct {
+            // Most response lines have "stream" field instead of "error"
+            // But we only care about "error" field
+            Error string
+        }
+
+        err = json.Unmarshal([]byte(line), &respBodyObject)
+        if err != nil {
+            return err
+        }
+
+        if respBodyObject.Error != "" {
+            return errors.New(respBodyObject.Error)
+        }
+    }
+
+    return nil
+}
+
 func PullImage(image string) (string, error) {
     ctx := context.Background()
     cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())

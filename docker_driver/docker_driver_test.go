@@ -15,6 +15,7 @@
 package docker_driver_test
 
 import (
+    "os"
     "testing"
 
     driver "github.com/Multi-Tier-Cloud/docker-driver/docker_driver"
@@ -26,6 +27,20 @@ const (
     failTestImage = "thisImageNameShouldNotExist"
     failContID = "thisIDShouldNotExist"
 )
+
+func TestBuildImage(test *testing.T) {
+    buildTestTarball := "build-test/test-image.tar"
+    buildContext, err := os.Open(buildTestTarball)
+    if err != nil {
+        test.Fatalf("Open() failed with error:\n%v", err)
+    }
+
+    buildTestImage := "test-image"
+    err = driver.BuildImage(buildContext, buildTestImage)
+    if err != nil {
+        test.Errorf("BuildImage() returned:\n%v", err)
+    }
+}
 
 func TestPullImage(test *testing.T) {
     test.Run("PullImage-success", func(test *testing.T) {
