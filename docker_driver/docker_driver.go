@@ -215,6 +215,60 @@ func ListRunningContainers() ([]string, error) {
     return clist, nil
 }
 
+// following official stats_helper calculations
+func calculateContainerCPU(stats *types.Stats) (float64) {
+    cpuPercent := 0.0
+    cpuDelta := float64(stats.CPUStats.CPUUsage.TotalUsage) - float64(stats.PreCPUStats.CPUUsage.TotalUsage)
+    systemDelta := float64(stats.CPUStats.SystemUsage) - float64(stats.PreCPUStats.SystemUsage)
+    onlineCPUs := float64(stats.CPUStats.OnlineCPUs)
+
+    if onlineCPUs == 0.0 {
+        onlineCPUs = float64(len(stats.CPUStats.CPUUsage.PercpuUsage))
+    }
+    if systemDelta > 0.0 && cpuDelta > 0.0 {
+        cpuPercent = (cpuDelta / systemDelta) * onlineCPUs * 100.0
+    }
+    return cpuPercent
+}
+
+func calculateContainerMemory(stats *types.MemoryStats) (float64) {
+    memUsage := float64(stats.Usage) - float64(stats.Stats["cache"])
+    limit := float64(stats.Limit)
+
+    if limit != 0 {
+        return (memUsage / limit) * 100.0
+    }
+
+    return 0
+}
+
+// calculate container cpu and mem usage
+func CheckContainerHealth(cont string) (float64, float64, error) {
+    ctx := context.Background()
+    cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+    if err != nil {
+        return 0, 0, err
+    }
+
+    resp, err := cli.ContainerStats(ctx, cont, false)
+    if err != nil {
+        return 0, 0, err
+    }
+
+    var containerStats types.StatsJSON
+    decoder := json.NewDecoder(resp.Body)
+    decoder.Decode(&containerStats)
+    stats := containerStats.Stats
+
+    cpuPercent := calculateContainerCPU(&stats)
+    //fmt.Println("cpu", cpuPercent)
+
+    memPercent := calculateContainerMemory(&stats.MemoryStats)
+    //fmt.Println("mem", memPercent)
+
+    return cpuPercent, memPercent, nil
+}
+
 // stopping container
 func StopContainer(cont string) (string, error) {
     ctx := context.Background()
