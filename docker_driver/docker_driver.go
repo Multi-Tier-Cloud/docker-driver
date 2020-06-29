@@ -21,6 +21,7 @@ import (
     "io"
     "io/ioutil"
     "math"
+    "strings"
 
     "github.com/docker/docker/api/types"
     "github.com/docker/docker/client"
@@ -44,6 +45,11 @@ type DockerConfig struct {
 // hash should be user/image@sha256:digest
 // official images should be library/imagename
 
+// TODO: Some of these functions read from the response body to get more information
+// Considering using docker's own JSONMessage struct:
+// https://godoc.org/github.com/docker/docker/pkg/jsonmessage#JSONMessage
+// However, PushImage does rely on the Aux field, which does not have a defined json structure
+
 // Builds an image given a build context and image name
 // buildContext is a tar archive containing all files needed to build image, including Dockerfile
 func BuildImage(buildContext io.Reader, image string) error {
@@ -59,32 +65,32 @@ func BuildImage(buildContext io.Reader, image string) error {
     }
     defer resp.Body.Close()
 
-    // Possible that cli.ImageBuild() does not return an error,
-    // but instead we see an error from the response body
+    // Possible that cli.ImageBuild() does not return an error, but we see an error from the response body
     scanner := bufio.NewScanner(resp.Body)
     for scanner.Scan() {
         line := scanner.Text()
         // fmt.Println(line)
 
-        var respBodyObject struct {
+        var respObject struct {
             // Most response lines have "stream" field instead of "error"
             // But we only care about "error" field
             Error string
         }
 
-        err = json.Unmarshal([]byte(line), &respBodyObject)
+        err = json.Unmarshal([]byte(line), &respObject)
         if err != nil {
             return err
         }
 
-        if respBodyObject.Error != "" {
-            return errors.New(respBodyObject.Error)
+        if respObject.Error != "" {
+            return errors.New(respObject.Error)
         }
     }
 
     return nil
 }
 
+// Pull image and return image digest
 func PullImage(image string) (string, error) {
     ctx := context.Background()
     cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -92,19 +98,42 @@ func PullImage(image string) (string, error) {
         return "", err
     }
 
-    out, err := cli.ImagePull(ctx, image, types.ImagePullOptions{})
+    resp, err := cli.ImagePull(ctx, image, types.ImagePullOptions{})
     if err != nil {
         return "", err
     }
-    defer out.Close()
+    defer resp.Close()
 
+    // Extract image digest from response
+    // Possible that cli.ImageBuild() does not return an error, but we see an error from the response body
     // Read until EOF sent to ensure proper transfer of image
-    _, err = ioutil.ReadAll(out)
-    if err != nil {
-        return "", err
+    scanner := bufio.NewScanner(resp)
+    for scanner.Scan() {
+        line := scanner.Text()
+        // fmt.Println(line)
+
+        var respObject struct {
+            Status string
+            Error string
+        }
+
+        err = json.Unmarshal([]byte(line), &respObject)
+        if err != nil {
+            return "", err
+        }
+
+        if respObject.Status != "" {
+            substrs := strings.Split(respObject.Status, " ")
+            if len(substrs) > 1 && substrs[0] == "Digest:" {
+                digest := substrs[1]
+                return digest, nil
+            }
+        } else if respObject.Error != "" {
+            return "", errors.New(respObject.Error)
+        }
     }
 
-    return "success", nil
+    return "", errors.New("docker_driver: Error did not receive digest")
 }
 
 // Push an image
@@ -122,8 +151,8 @@ func PushImage(encodedAuth, image string) (string, error) {
     }
     defer resp.Close()
 
-    // Possible that cli.ImagePush() does not return an error,
-    // but instead we see an error from the response body
+    // Extract image digest from repsonse body
+    // Possible that cli.ImageBuild() does not return an error, but we see an error from the response body
     scanner := bufio.NewScanner(resp)
     for scanner.Scan() {
         line := scanner.Text()

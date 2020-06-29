@@ -44,10 +44,14 @@ func TestBuildImage(test *testing.T) {
 
 func TestPullImage(test *testing.T) {
     test.Run("PullImage-success", func(test *testing.T) {
-        _, err := driver.PullImage(testImage)
+        digest, err := driver.PullImage(testImage)
         if err != nil {
             test.Errorf("PullImage() returned:\n%v", err)
         }
+        if digest == "" {
+            test.Errorf("PullImage() returned empty digest")
+        }
+        test.Logf("PullImage() returned digest: %s", digest)
     })
 
     test.Run("PullImage-fail", func(test *testing.T) {
