@@ -58,6 +58,7 @@ func BuildImage(buildContext io.Reader, image string) error {
     if err != nil {
         return err
     }
+    defer cli.Close()
 
     resp, err := cli.ImageBuild(ctx, buildContext, types.ImageBuildOptions{Tags: []string{image}})
     if err != nil {
@@ -97,6 +98,7 @@ func PullImage(image string) (string, error) {
     if err != nil {
         return "", err
     }
+    defer cli.Close()
 
     resp, err := cli.ImagePull(ctx, image, types.ImagePullOptions{})
     if err != nil {
@@ -144,6 +146,7 @@ func PushImage(encodedAuth, image string) (string, error) {
     if err != nil {
         return "", err
     }
+    defer cli.Close()
 
     resp, err := cli.ImagePush(ctx, image, types.ImagePushOptions{RegistryAuth:encodedAuth})
     if err != nil {
@@ -189,6 +192,7 @@ func SaveImage(image string) ([]byte, error) {
     if err != nil {
         return nil, err
     }
+    defer cli.Close()
 
     resp, err := cli.ImageSave(ctx, []string{image})
     if err != nil {
@@ -210,6 +214,7 @@ func ListImages() ([]string, error) {
     if err != nil {
         return nil, err
     }
+    defer cli.Close()
 
     images, err := cli.ImageList(ctx, types.ImageListOptions{})
     if err != nil {
@@ -230,6 +235,7 @@ func ListRunningContainers() ([]string, error) {
     if err != nil {
         return nil, err
     }
+    defer cli.Close()
 
     containers, err := cli.ContainerList(ctx, types.ContainerListOptions{})
     if err != nil {
@@ -278,6 +284,7 @@ func CheckContainerHealth(cont string) (float64, float64, error) {
     if err != nil {
         return 0, 0, err
     }
+    defer cli.Close()
 
     resp, err := cli.ContainerStats(ctx, cont, false)
     if err != nil {
@@ -305,6 +312,7 @@ func StopContainer(cont string) (string, error) {
     if err != nil {
         return "", err
     }
+    defer cli.Close()
 
     if err := cli.ContainerStop(ctx, cont, nil); err != nil {
         return "", err
@@ -320,6 +328,7 @@ func DeleteContainer(cont string) (string, error) {
     if err != nil {
         return "", err
     }
+    defer cli.Close()
 
     if err := cli.ContainerRemove(ctx, cont, types.ContainerRemoveOptions{}); err != nil {
         return "", err
@@ -335,6 +344,7 @@ func RestartContainer(cont string) (string, error) {
     if err != nil {
         return "", err
     }
+    defer cli.Close()
 
     if err := cli.ContainerRestart(ctx, cont, nil); err != nil {
         return "", err
@@ -350,6 +360,7 @@ func ResizeContainer(cont string, mem int64, cpu float64) (string, error) {
     if err != nil {
         return "", err
     }
+    defer cli.Close()
 
     _, err = cli.ContainerUpdate(ctx, cont, container.UpdateConfig{
         Resources: container.Resources{
@@ -373,6 +384,7 @@ func RunContainer(opt DockerConfig) (string, error) {
     if err != nil {
         return "", err
     }
+    defer cli.Close()
 
     resp, err := cli.ContainerCreate(ctx, &container.Config{
         Image: opt.Image,
