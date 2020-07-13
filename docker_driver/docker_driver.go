@@ -92,7 +92,7 @@ func BuildImage(buildContext io.Reader, image string) error {
 }
 
 // Pull image and return image digest
-func PullImage(image string) (string, error) {
+func PullImage(image string) (digest string, err error) {
     ctx := context.Background()
     cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
     if err != nil {
@@ -127,20 +127,23 @@ func PullImage(image string) (string, error) {
         if respObject.Status != "" {
             substrs := strings.Split(respObject.Status, " ")
             if len(substrs) > 1 && substrs[0] == "Digest:" {
-                digest := substrs[1]
-                return digest, nil
+                digest = substrs[1]
             }
         } else if respObject.Error != "" {
             return "", errors.New(respObject.Error)
         }
     }
 
-    return "", errors.New("docker_driver: Error did not receive digest")
+    if digest == "" {
+        return "", errors.New("docker_driver: Error did not receive digest")
+    }
+
+    return digest, nil
 }
 
 // Push an image
 // Returns its calculated digest (SHA256 hash of the image)
-func PushImage(encodedAuth, image string) (string, error) {
+func PushImage(encodedAuth, image string) (digest string, err error) {
     ctx := context.Background()
     cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
     if err != nil {
@@ -156,6 +159,7 @@ func PushImage(encodedAuth, image string) (string, error) {
 
     // Extract image digest from repsonse body
     // Possible that cli.ImageBuild() does not return an error, but we see an error from the response body
+    // Read until EOF sent to ensure proper transfer of image
     scanner := bufio.NewScanner(resp)
     for scanner.Scan() {
         line := scanner.Text()
@@ -175,13 +179,17 @@ func PushImage(encodedAuth, image string) (string, error) {
         }
 
         if respObject.Aux.Digest != "" {
-            return respObject.Aux.Digest, nil
+            digest = respObject.Aux.Digest
         } else if respObject.Error != "" {
             return "", errors.New(respObject.Error)
         }
     }
 
-    return "", errors.New("docker_driver: Error did not receive digest")
+    if digest == "" {
+        return "", errors.New("docker_driver: Error did not receive digest")
+    }
+
+    return digest, nil
 }
 
 // Save an image into a tar archive format
