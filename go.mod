@@ -1,4 +1,4 @@
-module github.com/Multi-Tier-Cloud/docker-driver
+module github.com/PhysarumSM/docker-driver
 
 go 1.13
 
